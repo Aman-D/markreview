@@ -1,0 +1,23 @@
+{
+  "name": "@markreview/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SURFACE: the comment UI (render, select->comment, sidebar). Built once, reused by the M5 host.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./page": "./src/page.ts",
+    "./app": "./src/app.ts"
+  },
+  "dependencies": {
+    "@markreview/model": "workspace:*"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.1"
+  },
+  "markreview": {
+    "layer": "surface"
+  }
+}

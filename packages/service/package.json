@@ -10,6 +10,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@markreview/anchor": "workspace:*",
     "@markreview/markdown": "workspace:*",
     "@markreview/model": "workspace:*"
   },

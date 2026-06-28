@@ -36,9 +36,25 @@ const FORBIDDEN_GLOBALS = [
   { re: /\bXMLHttpRequest\b/, name: 'XMLHttpRequest' },
   { re: /\beval\s*\(/, name: 'eval()' },
   { re: /\brequire\s*\(/, name: 'require()' },
+  // DOM globals: the root tsconfig pulls in the DOM lib for browser surfaces;
+  // core must not reach for it.
+  { re: /\bdocument\b/, name: 'document' },
+  { re: /\bwindow\b/, name: 'window' },
+  { re: /\blocalStorage\b/, name: 'localStorage' },
 ]
 
 const SPEC_RE = /(?:from|import|require)\s*\(?\s*['"]([^'"]+)['"]/g
+
+// Blank out comments and string/template literals so the global-identifier scan
+// doesn't trip over prose (e.g. the word "document" in a JSDoc comment).
+function stripCommentsAndStrings(code) {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/\/\/[^\n]*/g, ' ')
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/`(?:\\.|[^`\\])*`/g, '``')
+}
 
 function walk(dir) {
   const out = []
@@ -81,6 +97,7 @@ for (const pkg of CORE) {
   }
   for (const file of files) {
     const code = readFileSync(file, 'utf8')
+    const stripped = stripCommentsAndStrings(code)
     const rel = relative(root, file)
 
     for (const match of code.matchAll(SPEC_RE)) {
@@ -100,7 +117,7 @@ for (const pkg of CORE) {
     }
 
     for (const { re, name } of FORBIDDEN_GLOBALS) {
-      if (re.test(code)) {
+      if (re.test(stripped)) {
         flag(`core/${pkg}: ${rel} uses I/O global "${name}"`)
       }
     }

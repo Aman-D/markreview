@@ -48,16 +48,22 @@ describe('ReviewService.open', () => {
 })
 
 describe('commenting', () => {
-  it('adds an inline comment, anchored and persisted', async () => {
+  it('adds an inline comment, resolving the range from the quote, and persists', async () => {
     const svc = await open()
     const review = await svc.addInlineComment({
       quote: 'We hit the DB on every request',
       suffix: ', which is fine.',
-      range: { start: DOC.indexOf('We hit'), end: DOC.indexOf('We hit') + 30 },
+      hintStart: DOC.indexOf('## Sync path'),
       body: 'Scale past 10k?',
     })
     expect(review.comments).toHaveLength(1)
-    expect(review.comments[0]?.anchor?.quote).toBe('We hit the DB on every request')
+    const anchor = review.comments[0]?.anchor
+    expect(anchor?.quote).toBe('We hit the DB on every request')
+    // range resolved via anchor.locateQuote, not supplied by the caller
+    expect(anchor?.range).toEqual({
+      start: DOC.indexOf('We hit'),
+      end: DOC.indexOf('We hit') + 'We hit the DB on every request'.length,
+    })
     expect(validate(review).errors).toEqual([])
     expect(loadReview(join(dir, 'plan.review.json')).comments).toHaveLength(1)
   })

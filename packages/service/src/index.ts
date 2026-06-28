@@ -5,6 +5,7 @@
 // service itself touches no filesystem or network (avoids the two-UI trap).
 
 import { render, type RenderResult } from '@markreview/markdown'
+import { locateQuote } from '@markreview/anchor'
 import {
   createReview,
   appendComment,
@@ -24,7 +25,8 @@ export interface InlineCommentInput {
   quote: string
   prefix?: string
   suffix?: string
-  range?: { start: number; end: number }
+  /** Offset hint (the selected block's source start) to disambiguate the quote. */
+  hintStart?: number
   body: string
   author?: string
 }
@@ -93,6 +95,15 @@ export class ReviewService {
   }
 
   async addInlineComment(input: InlineCommentInput): Promise<Review> {
+    // Resolve the authoritative source range from the quote + context. The quote
+    // is authoritative; the range is a cache. Ambiguous/absent => no range (the
+    // comment is still anchored by quote). This is the live use of locateQuote.
+    const located = locateQuote(this.currentContent(), {
+      quote: input.quote,
+      ...(input.prefix ? { prefix: input.prefix } : {}),
+      ...(input.suffix ? { suffix: input.suffix } : {}),
+      ...(input.hintStart !== undefined ? { hintStart: input.hintStart } : {}),
+    })
     const comment: Comment = {
       id: this.nextId(),
       type: 'inline',
@@ -103,7 +114,7 @@ export class ReviewService {
         anchoredRev: this.review.doc.rev,
         ...(input.prefix ? { prefix: input.prefix } : {}),
         ...(input.suffix ? { suffix: input.suffix } : {}),
-        ...(input.range ? { range: input.range } : {}),
+        ...(located ? { range: located } : {}),
       },
       createdAt: this.now(),
       thread: [this.firstEntry(input.body, input.author)],
