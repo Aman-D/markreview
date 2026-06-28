@@ -9,7 +9,10 @@ export interface Anchor {
   quote: string
   prefix?: string
   suffix?: string
+  /** Character-offset hint into anchoredRev's source. A cache; quote wins on conflict. */
+  range?: { start: number; end: number }
   anchoredRev?: number
+  checksum?: string
 }
 
 /** resolveAnchor's three-tier outcome (agent-map > fuzzy > orphan). */
