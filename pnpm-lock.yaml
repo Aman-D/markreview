@@ -63,6 +63,22 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1(ajv@8.20.0)
 
+  packages/service:
+    dependencies:
+      '@markreview/markdown':
+        specifier: workspace:*
+        version: link:../markdown
+      '@markreview/model':
+        specifier: workspace:*
+        version: link:../model
+      '@markreview/store-fs':
+        specifier: workspace:*
+        version: link:../store-fs
+    devDependencies:
+      '@markreview/schema':
+        specifier: workspace:*
+        version: link:../schema
+
   packages/store-fs:
     dependencies:
       '@markreview/model':

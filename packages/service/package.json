@@ -1,0 +1,20 @@
+{
+  "name": "@markreview/service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ReviewService: orchestrates core (model, markdown) + store-fs. One impl reused by cli, web, and the M5 host.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@markreview/markdown": "workspace:*",
+    "@markreview/model": "workspace:*",
+    "@markreview/store-fs": "workspace:*"
+  },
+  "devDependencies": {
+    "@markreview/schema": "workspace:*"
+  }
+}
