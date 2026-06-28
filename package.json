@@ -13,7 +13,8 @@
     "test": "vitest run",
     "validate:fixtures": "node scripts/validate-fixtures.mjs",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm validate:fixtures",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "open": "tsx packages/cli/src/cli.ts open"
   },
   "devDependencies": {
     "@markreview/cli": "workspace:*",
