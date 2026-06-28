@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://markreview.dev/spec/review.schema.json",
+  "title": "MarkReview .review.json",
+  "description": "Portable review artifact: a markdown doc, its revisions, and anchored comments. See SPEC.md. v0.2 (draft).",
+  "type": "object",
+  "required": ["specVersion", "doc", "revisions", "comments"],
+  "additionalProperties": false,
+  "properties": {
+    "specVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Format version, e.g. \"0.2\". Readers MUST accept a higher minor and ignore unknown `ext` fields."
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "generator": { "type": "string" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "ext": { "type": "object" }
+      }
+    },
+    "doc": {
+      "type": "object",
+      "required": ["path", "rev"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "title": { "type": "string" },
+        "rev": { "type": "integer", "minimum": 1, "description": "Current revision number." },
+        "ext": { "type": "object" }
+      }
+    },
+    "revisions": { "type": "array", "items": { "$ref": "#/$defs/revision" } },
+    "comments": { "type": "array", "items": { "$ref": "#/$defs/comment" } },
+    "ext": { "type": "object", "description": "Forward-compatible extension bag." }
+  },
+  "$defs": {
+    "anchor": {
+      "type": "object",
+      "required": ["quote"],
+      "additionalProperties": false,
+      "properties": {
+        "quote": { "type": "string", "description": "The exact selected text. Authoritative." },
+        "prefix": { "type": "string", "description": "Text immediately before quote, for disambiguation." },
+        "suffix": { "type": "string", "description": "Text immediately after quote, for disambiguation." },
+        "range": {
+          "type": "object",
+          "required": ["start", "end"],
+          "additionalProperties": false,
+          "properties": {
+            "start": { "type": "integer", "minimum": 0 },
+            "end": { "type": "integer", "minimum": 0 }
+          },
+          "description": "Character-offset hint into anchoredRev source. A cache only; quote+prefix+suffix wins on conflict."
+        },
+        "anchoredRev": { "type": "integer", "minimum": 1, "description": "Revision the quote was taken from." },
+        "checksum": { "type": "string", "description": "Hash of quote; detects context drift. Writers SHOULD set it." },
+        "ext": { "type": "object" }
+      }
+    },
+    "revision": {
+      "type": "object",
+      "required": ["rev"],
+      "additionalProperties": false,
+      "properties": {
+        "rev": { "type": "integer", "minimum": 1 },
+        "content": { "type": "string", "description": "Full markdown. Present on rev 1; optional later when diff is used." },
+        "diffFrom": { "type": "integer", "minimum": 1 },
+        "diff": { "type": "string", "description": "Unified diff from diffFrom, when content is omitted." },
+        "contentHash": { "type": "string", "description": "Hash of materialized content; integrity check. Writers SHOULD set it." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "anchorMap": {
+          "type": "object",
+          "description": "Agent-reported effect of this revision on each comment's anchor. Keyed by comment id. PRIMARY anchoring strategy.",
+          "additionalProperties": { "$ref": "#/$defs/anchorMapEntry" }
+        },
+        "ext": { "type": "object" }
+      }
+    },
+    "anchorMapEntry": {
+      "type": "object",
+      "required": ["action"],
+      "additionalProperties": false,
+      "properties": {
+        "action": { "enum": ["moved", "addressed", "removed", "unchanged"] },
+        "anchor": { "$ref": "#/$defs/anchor", "description": "New anchor when action is moved/unchanged." },
+        "ext": { "type": "object" }
+      }
+    },
+    "comment": {
+      "type": "object",
+      "required": ["id", "type", "rev", "status", "thread"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["inline", "overall"] },
+        "rev": { "type": "integer", "minimum": 1, "description": "Revision this comment was made against." },
+        "anchor": { "$ref": "#/$defs/anchor" },
+        "status": { "enum": ["open", "resolved", "wontfix", "orphaned"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "thread": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/threadEntry" } },
+        "ext": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "inline" } } },
+          "then": { "required": ["anchor"] }
+        }
+      ]
+    },
+    "threadEntry": {
+      "type": "object",
+      "required": ["id", "author", "role", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "author": { "type": "string", "description": "Display name." },
+        "authorId": { "type": "string", "description": "Opaque stable id per reviewer; distinguishes same-named reviewers and survives merges. Writers SHOULD set it." },
+        "role": { "enum": ["human", "agent"] },
+        "body": { "type": "string" },
+        "action": { "enum": ["comment", "revised", "rejected", "asked"] },
+        "appliedInRev": { "type": "integer", "minimum": 1, "description": "Revision produced when role=agent acted on this." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "ext": { "type": "object" }
+      }
+    }
+  }
+}

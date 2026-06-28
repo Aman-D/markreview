@@ -1,0 +1,58 @@
+{
+  "specVersion": "0.2",
+  "meta": { "generator": "hand-written-fixture", "generatedAt": "2026-06-28T12:00:00Z" },
+  "doc": { "path": "auth-plan.md", "title": "Auth plan", "rev": 2 },
+  "revisions": [
+    {
+      "rev": 1,
+      "content": "# Auth plan\n\n## Sync path\nWe hit the DB on every request, which is fine at low scale.\n",
+      "createdAt": "2026-06-28T11:00:00Z"
+    },
+    {
+      "rev": 2,
+      "diffFrom": 1,
+      "diff": "@@ -3,2 +3,2 @@\n-We hit the DB on every request, which is fine at low scale.\n+We hit the DB on every request for the sync path. For async we cache, so this holds past low scale.\n",
+      "createdAt": "2026-06-28T11:30:00Z",
+      "anchorMap": {
+        "c_01": {
+          "action": "moved",
+          "anchor": {
+            "quote": "We hit the DB on every request",
+            "prefix": "## Sync path\n",
+            "suffix": " for the sync path.",
+            "anchoredRev": 2
+          }
+        }
+      }
+    }
+  ],
+  "comments": [
+    {
+      "id": "c_01",
+      "type": "inline",
+      "rev": 1,
+      "status": "resolved",
+      "createdAt": "2026-06-28T11:10:00Z",
+      "anchor": {
+        "quote": "We hit the DB on every request",
+        "prefix": "## Sync path\n",
+        "suffix": ", which is fine at low scale.",
+        "anchoredRev": 1
+      },
+      "thread": [
+        { "id": "r_01", "author": "Sam", "authorId": "u_sam", "role": "human", "body": "Won't this fall over past 10k users?", "action": "comment", "createdAt": "2026-06-28T11:10:00Z" },
+        { "id": "r_02", "author": "agent", "authorId": "agent", "role": "agent", "body": "Agreed for the sync path. I split sync vs async and added caching for async. Updated in v2.", "action": "revised", "appliedInRev": 2, "createdAt": "2026-06-28T11:30:00Z" }
+      ]
+    },
+    {
+      "id": "c_02",
+      "type": "overall",
+      "rev": 1,
+      "status": "open",
+      "createdAt": "2026-06-28T11:12:00Z",
+      "thread": [
+        { "id": "r_03", "author": "Sam", "authorId": "u_sam", "role": "human", "body": "Overall solid. Add a section on rate limiting before we ship.", "action": "comment", "createdAt": "2026-06-28T11:12:00Z" }
+      ]
+    }
+  ]
+}

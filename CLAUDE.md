@@ -14,6 +14,11 @@ Full status, roadmap, and design are in the private `build-journal` repo under
 environment, read `markreview/STATUS.md` there first to know the current milestone and
 next action. If not, infer scope from this repo and ask.
 
+## Architecture (locked)
+- Foundational architecture: `ARCHITECTURE.md`. Format contract: `spec/SPEC.md` + `spec/review.schema.json`.
+- Per-phase decisions are recorded as ADRs in `docs/adr/` (see its README for the convention).
+- Read these before changing the schema, the anchoring contract, or the package layout.
+
 ## Build principles
 - `.review.json` is the product — keep the schema clean, open, versioned.
 - Text-range anchoring (quote + prefix/suffix), never line numbers. Agent emits an
