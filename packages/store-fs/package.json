@@ -12,5 +12,8 @@
   "dependencies": {
     "@markreview/model": "workspace:*",
     "@markreview/schema": "workspace:*"
+  },
+  "markreview": {
+    "layer": "surface"
   }
 }

@@ -1,12 +1,17 @@
 // @markreview/service — SURFACE. ReviewService orchestrates the pure core
-// (model, markdown) and the store (store-fs) behind one API. The CLI, the web
-// server, and the M5 hosted server all drive this same class, so the review
-// logic is written exactly once (avoids the two-divergent-UIs trap).
+// (model, markdown) and a storage port (model.ReviewStore) behind one API. The
+// CLI, the web server, and the M5 hosted server all drive this same class with
+// their own store adapter, so the review logic is written exactly once and the
+// service itself touches no filesystem or network (avoids the two-UI trap).
 
-import { readFileSync, existsSync } from 'node:fs'
 import { render, type RenderResult } from '@markreview/markdown'
-import { createReview, appendComment, type Review, type Comment } from '@markreview/model'
-import { sidecarPathFor, loadReview, saveReview } from '@markreview/store-fs'
+import {
+  createReview,
+  appendComment,
+  type Review,
+  type Comment,
+  type ReviewStore,
+} from '@markreview/model'
 
 export interface ServiceOptions {
   /** Default reviewer display name. */
@@ -29,30 +34,53 @@ export interface OverallCommentInput {
   author?: string
 }
 
+/** Highest numeric suffix among existing `c_NN` ids, or 0. */
+function maxCommentCounter(comments: ReadonlyArray<Comment>): number {
+  let max = 0
+  for (const c of comments) {
+    const m = /^c_(\d+)$/.exec(c.id)
+    if (m) max = Math.max(max, Number(m[1]))
+  }
+  return max
+}
+
 export class ReviewService {
   private review: Review
-  private readonly sidecar: string
+  private readonly docPath: string
+  private readonly store: ReviewStore
   private readonly author: string
   private readonly now: () => string
+  private counter: number
 
-  private constructor(review: Review, sidecar: string, opts: ServiceOptions) {
+  private constructor(
+    review: Review,
+    docPath: string,
+    store: ReviewStore,
+    opts: ServiceOptions,
+  ) {
     this.review = review
-    this.sidecar = sidecar
+    this.docPath = docPath
+    this.store = store
     this.author = opts.author ?? 'anonymous'
     this.now = opts.now ?? (() => new Date().toISOString())
+    this.counter = maxCommentCounter(review.comments)
   }
 
-  /** Open a doc: load its sidecar if present, else create rev 1 and persist it. */
-  static open(docPath: string, opts: ServiceOptions = {}): ReviewService {
-    const sidecar = sidecarPathFor(docPath)
+  /** Open a doc: load its review if present, else create rev 1 and persist it. */
+  static async open(
+    docPath: string,
+    store: ReviewStore,
+    opts: ServiceOptions = {},
+  ): Promise<ReviewService> {
+    if (!docPath) throw new Error('ReviewService.open: docPath must not be empty')
     let review: Review
-    if (existsSync(sidecar)) {
-      review = loadReview(sidecar)
+    if (await store.exists(docPath)) {
+      review = await store.loadReview(docPath)
     } else {
-      review = createReview({ path: docPath, content: readFileSync(docPath, 'utf8') })
-      saveReview(sidecar, review)
+      review = createReview({ path: docPath, content: await store.readDoc(docPath) })
+      await store.saveReview(docPath, review)
     }
-    return new ReviewService(review, sidecar, opts)
+    return new ReviewService(review, docPath, store, opts)
   }
 
   getReview(): Review {
@@ -64,7 +92,7 @@ export class ReviewService {
     return render(this.currentContent())
   }
 
-  addInlineComment(input: InlineCommentInput): Review {
+  async addInlineComment(input: InlineCommentInput): Promise<Review> {
     const comment: Comment = {
       id: this.nextId(),
       type: 'inline',
@@ -83,7 +111,7 @@ export class ReviewService {
     return this.commit(comment)
   }
 
-  addOverallComment(input: OverallCommentInput): Review {
+  async addOverallComment(input: OverallCommentInput): Promise<Review> {
     const comment: Comment = {
       id: this.nextId(),
       type: 'overall',
@@ -95,15 +123,15 @@ export class ReviewService {
     return this.commit(comment)
   }
 
-  private commit(comment: Comment): Review {
+  private async commit(comment: Comment): Promise<Review> {
     this.review = appendComment(this.review, comment)
-    saveReview(this.sidecar, this.review)
+    await this.store.saveReview(this.docPath, this.review)
     return this.review
   }
 
   private firstEntry(body: string, author?: string) {
     return {
-      id: 'r_01',
+      id: `r_${String(this.counter).padStart(2, '0')}_01`,
       author: author ?? this.author,
       role: 'human' as const,
       body,
@@ -113,7 +141,8 @@ export class ReviewService {
   }
 
   private nextId(): string {
-    return `c_${String(this.review.comments.length + 1).padStart(2, '0')}`
+    this.counter += 1
+    return `c_${String(this.counter).padStart(2, '0')}`
   }
 
   private currentContent(): string {

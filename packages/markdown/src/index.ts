@@ -5,10 +5,8 @@
 // node positions. That annotation is what lets a rendered text selection map back
 // to the source — risk #2 in ARCHITECTURE.md.
 //
-// locateQuote() is the inverse: given a quote (+ optional context), find where it
-// lives in the source. It's exact in M1; the fuzzy/edit-surviving version is the
-// M2 anchoring engine. The format treats the quote as authoritative, so locating
-// by text (disambiguated by prefix/suffix/hint) is the robust primary path.
+// Quote→source-offset location lives in @markreview/anchor (locateQuote), not
+// here: anchoring is the anchor package's job; this package only renders.
 
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
@@ -66,55 +64,4 @@ export function render(source: string): RenderResult {
     .processSync(source)
 
   return { html: String(file), sourceMap }
-}
-
-export interface QuoteQuery {
-  quote: string
-  prefix?: string
-  suffix?: string
-  /** Offset hint (e.g. the containing block's start) to disambiguate. */
-  hintStart?: number
-}
-
-/** Locate a quote in the source. Exact match in M1; fuzzy fallback is M2. */
-export function locateQuote(
-  source: string,
-  q: QuoteQuery,
-): { start: number; end: number } | null {
-  if (q.quote === '') return null
-
-  const occurrences: number[] = []
-  for (let i = source.indexOf(q.quote); i !== -1; i = source.indexOf(q.quote, i + 1)) {
-    occurrences.push(i)
-  }
-  if (occurrences.length === 0) return null
-
-  const score = (idx: number): number => {
-    let s = 0
-    if (q.prefix) {
-      const before = source.slice(Math.max(0, idx - q.prefix.length), idx)
-      if (before.endsWith(q.prefix)) s += 2
-    }
-    if (q.suffix) {
-      const afterStart = idx + q.quote.length
-      const after = source.slice(afterStart, afterStart + q.suffix.length)
-      if (after.startsWith(q.suffix)) s += 2
-    }
-    if (typeof q.hintStart === 'number') {
-      s += 1 / (1 + Math.abs(idx - q.hintStart))
-    }
-    return s
-  }
-
-  let best = occurrences[0]!
-  let bestScore = score(best)
-  for (const idx of occurrences.slice(1)) {
-    const sc = score(idx)
-    if (sc > bestScore) {
-      best = idx
-      bestScore = sc
-    }
-  }
-
-  return { start: best, end: best + q.quote.length }
 }

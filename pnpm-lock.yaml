@@ -71,13 +71,13 @@ importers:
       '@markreview/model':
         specifier: workspace:*
         version: link:../model
-      '@markreview/store-fs':
-        specifier: workspace:*
-        version: link:../store-fs
     devDependencies:
       '@markreview/schema':
         specifier: workspace:*
         version: link:../schema
+      '@markreview/store-fs':
+        specifier: workspace:*
+        version: link:../store-fs
 
   packages/store-fs:
     dependencies:

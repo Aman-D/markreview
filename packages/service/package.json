@@ -11,10 +11,13 @@
   },
   "dependencies": {
     "@markreview/markdown": "workspace:*",
-    "@markreview/model": "workspace:*",
-    "@markreview/store-fs": "workspace:*"
+    "@markreview/model": "workspace:*"
   },
   "devDependencies": {
-    "@markreview/schema": "workspace:*"
+    "@markreview/schema": "workspace:*",
+    "@markreview/store-fs": "workspace:*"
+  },
+  "markreview": {
+    "layer": "surface"
   }
 }

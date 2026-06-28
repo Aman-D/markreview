@@ -56,6 +56,20 @@ export interface Review {
   comments: Comment[]
 }
 
+/**
+ * Persistence port (hexagonal). A pure interface — no I/O here. Implementations
+ * are surfaces: @markreview/store-fs (local sidecar) today, the M5 hosted store
+ * later. Keyed by docPath so an adapter can map it to a sidecar path or a record
+ * id. Methods may be sync or async so the same ReviewService drives both a local
+ * filesystem (sync) and a remote datastore (async).
+ */
+export interface ReviewStore {
+  exists(docPath: string): boolean | Promise<boolean>
+  loadReview(docPath: string): Review | Promise<Review>
+  saveReview(docPath: string, review: Review): void | Promise<void>
+  readDoc(docPath: string): string | Promise<string>
+}
+
 export interface CreateReviewParams {
   path: string
   content: string

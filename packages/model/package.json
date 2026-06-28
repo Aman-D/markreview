@@ -12,5 +12,8 @@
   "dependencies": {
     "@markreview/anchor": "workspace:*",
     "@markreview/schema": "workspace:*"
+  },
+  "markreview": {
+    "layer": "core"
   }
 }

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { validate } from '@markreview/schema'
-import { loadReview } from '@markreview/store-fs'
+import { loadReview, fsReviewStore } from '@markreview/store-fs'
 import { ReviewService } from './index.js'
 
 const DOC = '# Auth plan\n\n## Sync path\nWe hit the DB on every request, which is fine.\n'
@@ -20,27 +20,37 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
+const open = () => ReviewService.open(docPath, fsReviewStore, opts)
+
 describe('ReviewService.open', () => {
-  it('creates a schema-valid rev-1 review and persists the sidecar', () => {
-    const svc = ReviewService.open(docPath, opts)
-    const review = svc.getReview()
+  it('creates a schema-valid rev-1 review and persists the sidecar', async () => {
+    const review = (await open()).getReview()
     expect(review.doc.rev).toBe(1)
     expect(validate(review).errors).toEqual([])
-    // sidecar written to disk
     expect(loadReview(join(dir, 'plan.review.json')).doc.rev).toBe(1)
   })
 
-  it('reloads an existing sidecar instead of recreating it', () => {
-    ReviewService.open(docPath, opts).addOverallComment({ body: 'first pass' })
-    const reopened = ReviewService.open(docPath, opts)
+  it('reloads an existing sidecar instead of recreating it', async () => {
+    await (await open()).addOverallComment({ body: 'first pass' })
+    const reopened = await open()
     expect(reopened.getReview().comments).toHaveLength(1)
+  })
+
+  it('rejects an empty docPath', async () => {
+    await expect(ReviewService.open('', fsReviewStore, opts)).rejects.toThrow(/docPath/)
+  })
+
+  it('rejects a missing document', async () => {
+    await expect(
+      ReviewService.open(join(dir, 'nope.md'), fsReviewStore, opts),
+    ).rejects.toThrow(/not found/)
   })
 })
 
 describe('commenting', () => {
-  it('adds an inline comment, anchored and persisted', () => {
-    const svc = ReviewService.open(docPath, opts)
-    const review = svc.addInlineComment({
+  it('adds an inline comment, anchored and persisted', async () => {
+    const svc = await open()
+    const review = await svc.addInlineComment({
       quote: 'We hit the DB on every request',
       suffix: ', which is fine.',
       range: { start: DOC.indexOf('We hit'), end: DOC.indexOf('We hit') + 30 },
@@ -52,26 +62,28 @@ describe('commenting', () => {
     expect(loadReview(join(dir, 'plan.review.json')).comments).toHaveLength(1)
   })
 
-  it('adds an overall (anchorless) comment', () => {
-    const svc = ReviewService.open(docPath, opts)
-    const review = svc.addOverallComment({ body: 'Add rate limiting.' })
+  it('adds an overall (anchorless) comment', async () => {
+    const review = await (await open()).addOverallComment({ body: 'Add rate limiting.' })
     expect(review.comments[0]?.type).toBe('overall')
     expect(review.comments[0]?.anchor).toBeUndefined()
     expect(validate(review).errors).toEqual([])
   })
 
-  it('assigns sequential comment ids', () => {
-    const svc = ReviewService.open(docPath, opts)
-    svc.addOverallComment({ body: 'one' })
-    const review = svc.addOverallComment({ body: 'two' })
+  it('assigns sequential, collision-safe comment ids derived from existing max', async () => {
+    const svc = await open()
+    await svc.addOverallComment({ body: 'one' })
+    const review = await svc.addOverallComment({ body: 'two' })
     expect(review.comments.map((c) => c.id)).toEqual(['c_01', 'c_02'])
+    // reopening continues from the persisted max, not from length
+    const reopened = await open()
+    const next = await reopened.addOverallComment({ body: 'three' })
+    expect(next.comments.map((c) => c.id)).toEqual(['c_01', 'c_02', 'c_03'])
   })
 })
 
 describe('render', () => {
-  it('renders the current revision with source offsets', () => {
-    const svc = ReviewService.open(docPath, opts)
-    const { html, sourceMap } = svc.render()
+  it('renders the current revision with source offsets', async () => {
+    const { html, sourceMap } = (await open()).render()
     expect(html).toContain('Auth plan')
     expect(html).toContain('data-src-start')
     expect(sourceMap.some((s) => s.tag === 'p')).toBe(true)
