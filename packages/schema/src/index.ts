@@ -7,7 +7,7 @@
 
 import Ajv2020 from 'ajv/dist/2020.js'
 import addFormats from 'ajv-formats'
-import reviewSchema from '../../../spec/review.schema.json'
+import reviewSchema from '../../../spec/review.schema.json' with { type: 'json' }
 
 export { reviewSchema }
 

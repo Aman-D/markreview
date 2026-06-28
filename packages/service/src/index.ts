@@ -79,7 +79,9 @@ export class ReviewService {
     if (await store.exists(docPath)) {
       review = await store.loadReview(docPath)
     } else {
-      review = createReview({ path: docPath, content: await store.readDoc(docPath) })
+      const content = await store.readDoc(docPath)
+      const title = /^#\s+(.+)$/m.exec(content)?.[1]?.trim()
+      review = createReview({ path: docPath, content, ...(title ? { title } : {}) })
       await store.saveReview(docPath, review)
     }
     return new ReviewService(review, docPath, store, opts)
