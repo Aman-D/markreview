@@ -1,0 +1,24 @@
+{
+  "name": "markreview-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "node scripts/import-lint.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "validate:fixtures": "node scripts/validate-fixtures.mjs",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm validate:fixtures"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

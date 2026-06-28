@@ -25,6 +25,22 @@ just two humans reviewing a markdown file.
 
 Building incrementally in public. See the milestones in [`ROADMAP`](#roadmap) (coming soon).
 
+## Development
+
+pnpm workspace monorepo, TypeScript on Node ≥20. The pure **core** packages
+(`@markreview/schema`, `anchor`, `model`, `markdown`, `revision`, `agent`) do no I/O and
+are fully testable; **surfaces** (`store-fs`, and later the CLI / web / server / MCP) are
+the swappable I/O layer. The boundary is enforced in CI by `import-lint` — core may not
+import filesystem/network builtins or any surface. See [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+
+```bash
+pnpm install
+pnpm check   # lint (boundary) + typecheck + test + validate spec fixtures
+```
+
+Individual gates: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm validate:fixtures`.
+All four run on every push via [CI](./.github/workflows/ci.yml).
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).

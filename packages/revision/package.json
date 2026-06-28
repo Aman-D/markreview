@@ -1,0 +1,12 @@
+{
+  "name": "@markreview/revision",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Revision storage policy (rev1 full + diffs), materialize and diff. Pure.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
