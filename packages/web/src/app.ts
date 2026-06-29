@@ -53,6 +53,7 @@ function renderHighlights(): void {
     }
   })
   for (const c of inlineComments()) {
+    if (c.status === 'orphaned') continue // its text is gone/rewritten
     const quote = c.anchor?.quote
     if (quote) wrapFirst(doc, quote, c.id)
   }
@@ -97,9 +98,13 @@ function renderSidebar(): void {
         c.type === 'inline' && c.anchor?.quote
           ? `<div class="quote">“${escapeHtml(c.anchor.quote)}”</div>`
           : ''
-      return `<div class="comment ${c.type}" id="comment-${c.id}">
+      const badge =
+        c.status === 'orphaned'
+          ? '<span class="badge" title="the commented text was removed or rewritten">orphaned</span>'
+          : ''
+      return `<div class="comment ${c.type} ${c.status}" id="comment-${c.id}">
         <div class="meta"><span class="who">${escapeHtml(first?.author ?? '')}</span>
-          <span>·</span><span>${c.type}</span></div>
+          <span>·</span><span>${c.type}</span>${badge}</div>
         ${quote}
         <div class="body">${escapeHtml(first?.body ?? '')}</div>
       </div>`

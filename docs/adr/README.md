@@ -42,3 +42,4 @@ Don't write one for trivial or easily-reversible choices.
 ## Index
 - [0001 — Foundational architecture](./0001-foundational-architecture.md) (M0)
 - [0002 — M1: storage port, anchoring placement, boundary hardening](./0002-m1-boundaries-and-storage-port.md) (M1)
+- [0003 — M2: the fuzzy anchoring engine](./0003-m2-fuzzy-anchoring.md) (M2)

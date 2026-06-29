@@ -8,7 +8,7 @@
 // M1 builds createReview + appendComment. add-revision, the agent anchor-map, and
 // merge() arrive in M3/M4.
 
-import type { Anchor } from '@markreview/anchor'
+import { resolveAnchor, type Anchor } from '@markreview/anchor'
 import { SPEC_VERSION } from '@markreview/schema'
 
 export type Role = 'human' | 'agent'
@@ -104,6 +104,42 @@ export function appendComment(review: Review, comment: Comment): Review {
     throw new Error(`duplicate comment id: ${comment.id}`)
   }
   return { ...review, comments: [...review.comments, comment] }
+}
+
+/**
+ * Re-anchor a single comment onto a new version of the source. Pure, immutable
+ * (returns a NEW comment). Owns the `status → orphaned` invariant.
+ *   - exact/fuzzy  → keep status, refresh anchor.range + anchoredRev, keep quote
+ *   - orphan       → status: 'orphaned', anchor left intact (still shown vs comment.rev)
+ * Only open inline comments are re-anchored; others are returned untouched.
+ *
+ * M3 will consult revision.anchorMap (the PRIMARY rung) above this fuzzy fallback.
+ */
+export function reanchor(comment: Comment, newSource: string, currentRev: number): Comment {
+  if (comment.type !== 'inline' || !comment.anchor || comment.status !== 'open') {
+    return comment
+  }
+  const outcome = resolveAnchor(newSource, comment.anchor)
+  if (outcome.kind === 'orphan') {
+    return { ...comment, status: 'orphaned' }
+  }
+  return {
+    ...comment,
+    anchor: {
+      ...comment.anchor,
+      range: { start: outcome.start, end: outcome.end },
+      anchoredRev: currentRev,
+    },
+  }
+}
+
+/** Re-anchor every comment onto a new source (immutable). */
+export function reanchorAll(
+  comments: ReadonlyArray<Comment>,
+  newSource: string,
+  currentRev: number,
+): Comment[] {
+  return comments.map((c) => reanchor(c, newSource, currentRev))
 }
 
 /** Merge two reviews by stable id (append-only). Implemented in M4. */

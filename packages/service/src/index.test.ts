@@ -87,6 +87,44 @@ describe('commenting', () => {
   })
 })
 
+describe('re-anchoring on reopen (M2)', () => {
+  it('refreshes an inline comment’s range after an edit above it, keeping the quote', async () => {
+    const svc = await open()
+    await svc.addInlineComment({
+      quote: 'We hit the DB on every request',
+      suffix: ', which is fine.',
+      hintStart: DOC.indexOf('## Sync path'),
+      body: 'Scale?',
+    })
+    // Edit the doc on disk ABOVE the quote (shifts offsets, quote untouched).
+    writeFileSync(docPath, DOC.replace('# Auth plan', '# Authentication plan (v2)'), 'utf8')
+
+    const reopened = await open()
+    const c = reopened.getReview().comments[0]
+    expect(c?.status).toBe('open')
+    const edited = DOC.replace('# Auth plan', '# Authentication plan (v2)')
+    const r = c?.anchor?.range
+    expect(edited.slice(r!.start, r!.end)).toBe('We hit the DB on every request')
+  })
+
+  it('orphans an inline comment when its quote is deleted from the doc', async () => {
+    const svc = await open()
+    await svc.addInlineComment({
+      quote: 'We hit the DB on every request',
+      suffix: ', which is fine.',
+      hintStart: DOC.indexOf('## Sync path'),
+      body: 'Scale?',
+    })
+    writeFileSync(
+      docPath,
+      DOC.replace('We hit the DB on every request, which is fine.', 'Caching handles reads.'),
+      'utf8',
+    )
+    const reopened = await open()
+    expect(reopened.getReview().comments[0]?.status).toBe('orphaned')
+  })
+})
+
 describe('render', () => {
   it('renders the current revision with source offsets', async () => {
     const { html, sourceMap } = (await open()).render()

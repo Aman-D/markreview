@@ -9,6 +9,13 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "diff-match-patch": "^1.0.5"
+  },
+  "devDependencies": {
+    "@types/diff-match-patch": "^1.0.36",
+    "fast-check": "^3.23.1"
+  },
   "markreview": {
     "layer": "core"
   }

@@ -5,10 +5,11 @@
 // service itself touches no filesystem or network (avoids the two-UI trap).
 
 import { render, type RenderResult } from '@markreview/markdown'
-import { locateQuote } from '@markreview/anchor'
+import { locateQuote, createAnchor } from '@markreview/anchor'
 import {
   createReview,
   appendComment,
+  reanchorAll,
   type Review,
   type Comment,
   type ReviewStore,
@@ -34,6 +35,38 @@ export interface InlineCommentInput {
 export interface OverallCommentInput {
   body: string
   author?: string
+}
+
+/**
+ * If the doc on disk differs from the stored current-revision content, re-anchor
+ * the open comments against it and persist. M2 stopgap: it updates the current
+ * revision's content in place; M4 will instead append a new revision (diff-based)
+ * and re-anchor across it. Doc unreadable → keep the sidecar as-is.
+ */
+async function reanchorIfChanged(
+  review: Review,
+  docPath: string,
+  store: ReviewStore,
+): Promise<Review> {
+  let current: string
+  try {
+    current = await store.readDoc(docPath)
+  } catch {
+    return review
+  }
+  const rev = review.doc.rev
+  const stored = review.revisions.find((r) => r.rev === rev)?.content
+  if (stored === undefined || current === stored) return review
+
+  const next: Review = {
+    ...review,
+    comments: reanchorAll(review.comments, current, rev),
+    revisions: review.revisions.map((r) =>
+      r.rev === rev ? { ...r, content: current } : r,
+    ),
+  }
+  await store.saveReview(docPath, next)
+  return next
 }
 
 /** Highest numeric suffix among existing `c_NN` ids, or 0. */
@@ -78,6 +111,7 @@ export class ReviewService {
     let review: Review
     if (await store.exists(docPath)) {
       review = await store.loadReview(docPath)
+      review = await reanchorIfChanged(review, docPath, store)
     } else {
       const content = await store.readDoc(docPath)
       const title = /^#\s+(.+)$/m.exec(content)?.[1]?.trim()
@@ -97,27 +131,32 @@ export class ReviewService {
   }
 
   async addInlineComment(input: InlineCommentInput): Promise<Review> {
-    // Resolve the authoritative source range from the quote + context. The quote
-    // is authoritative; the range is a cache. Ambiguous/absent => no range (the
-    // comment is still anchored by quote). This is the live use of locateQuote.
-    const located = locateQuote(this.currentContent(), {
+    // Resolve the authoritative source range from the quote + context, then
+    // capture a full anchor (quote + context + checksum) from the source via
+    // createAnchor. The quote is authoritative; range is a cache. If the quote
+    // can't be uniquely located, fall back to a quote-only anchor (no range).
+    const content = this.currentContent()
+    const rev = this.review.doc.rev
+    const located = locateQuote(content, {
       quote: input.quote,
       ...(input.prefix ? { prefix: input.prefix } : {}),
       ...(input.suffix ? { suffix: input.suffix } : {}),
       ...(input.hintStart !== undefined ? { hintStart: input.hintStart } : {}),
     })
+    const anchor = located
+      ? createAnchor(content, located, { anchoredRev: rev })
+      : {
+          quote: input.quote,
+          anchoredRev: rev,
+          ...(input.prefix ? { prefix: input.prefix } : {}),
+          ...(input.suffix ? { suffix: input.suffix } : {}),
+        }
     const comment: Comment = {
       id: this.nextId(),
       type: 'inline',
-      rev: this.review.doc.rev,
+      rev,
       status: 'open',
-      anchor: {
-        quote: input.quote,
-        anchoredRev: this.review.doc.rev,
-        ...(input.prefix ? { prefix: input.prefix } : {}),
-        ...(input.suffix ? { suffix: input.suffix } : {}),
-        ...(located ? { range: located } : {}),
-      },
+      anchor,
       createdAt: this.now(),
       thread: [this.firstEntry(input.body, input.author)],
     }

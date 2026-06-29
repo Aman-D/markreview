@@ -63,6 +63,11 @@ aside h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; co
 }
 .comment.inline { border-left: 3px solid var(--hl-line); }
 .comment.overall { border-left: 3px solid var(--accent); }
+.comment.orphaned { opacity: .65; border-left-color: #d0d5dd; }
+.badge {
+  margin-left: auto; background: #fde2e1; color: #b42318;
+  border-radius: 6px; padding: 1px 7px; font-size: 11px; font-weight: 600;
+}
 .comment .meta { font-size: 12px; color: var(--muted); margin-bottom: 5px; display: flex; gap: 6px; }
 .comment .meta .who { color: var(--ink); font-weight: 600; }
 .comment .quote {
